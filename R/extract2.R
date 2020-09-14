@@ -1,7 +1,7 @@
 #' @name sf_func
 #' @title functions of zonal statistics
 #' @importFrom plyr llply
-#' @import raster exactextractr
+#' @import exactextractr
 
 
 #' @rdname sf_func
@@ -56,7 +56,7 @@ sf_sum_weighted <- function(vals, cov_fracs, weights, .fun_sum = colSums, ...) {
 overlap <- function(r, shp) {
   area = raster::area(r)
   geoms <- llply(shp, function(wkb) {
-    ret <- CPP_exact_extract(r, wkb)
+    ret <- exactextractr:::CPP_exact_extract(r, wkb)
     dim = dim(ret$weights)
     ret$nrow = dim[1]
     ret$ncol = dim[2]
@@ -70,15 +70,17 @@ overlap <- function(r, shp) {
   geoms
 }
 
-#' Get zonal statistics from raster
+#' @name extract2
+#' @title Get zonal statistics from raster
 #' 
 #' @param r Raster or RasterBrick object
 #' @param shp WKB object, e.g. `sf::st_as_binary(sf::st_geometry(basins), EWKB=TRUE)`
 #' 
 #' @export 
-extract <- function(r, geoms) {
-  .fun_sum = if (nbands(r) > 1) colSums else sum
+NULL
 
+.extract2 <- function(r, geoms, fun = sf_mean_weighted, ...) {
+  .fun_sum = if (nbands(r) > 1) colSums else sum
   n = length(geoms)
   res = list()
   for (i in 1:n) {
@@ -88,7 +90,28 @@ extract <- function(r, geoms) {
       col = ret$col,
       nrow = ret$nrow, ncol = ret$ncol
     ) #%>% as.matrix()
-    res[[i]] <- sf_mean_weighted(vals, ret$weights, ret$area, .fun_sum = .fun_sum)
+    res[[i]] <- fun(vals, ret$weights, ret$area, .fun_sum = .fun_sum)
   }
-  do.call(rbind, res)
+  do.call(rbind, res) %>% as.data.frame()
+}
+
+setGeneric("extract2", function(r, geoms, ...) standardGeneric("extract2"))
+
+#' @rdname extract2
+#' @export
+setMethod("extract2", signature(r = "Raster"), .extract2)
+
+#' @export
+setMethod("extract2", signature(r = "list"), function(r, geoms, ...) {
+  res = list()
+  for(i in 1:length(r)) {
+    runningId(i)
+    res[[i]] <- extract2(r[[i]], geoms, ...)
+  }
+  setNames(res, names(r))
+})
+
+runningId <- function(i, step = 1, N, prefix = "") {
+  perc <- ifelse(missing(N), "", sprintf(", %.1f%% ", i/N*100))
+  if (mod(i, step) == 0) cat(sprintf("[%s] running%s %d ...\n", prefix, perc, i))    
 }
