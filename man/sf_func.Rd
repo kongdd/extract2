@@ -8,13 +8,16 @@
 \alias{sf_sum_weighted}
 \title{functions of zonal statistics}
 \usage{
-sf_mean(vals, cov_fracs, .fun_sum = colSums, ...)
+sf_mean(vals, fraction, .fun_sum = colSums, ...)
 
-sf_sum(vals, cov_fracs, .fun_sum = colSums, ...)
+sf_sum(vals, fraction, .fun_sum = colSums, ...)
 
-sf_mean_weighted(vals, cov_fracs, weights, .fun_sum = colSums, ...)
+sf_mean_weighted(vals, fraction, weights, .fun_sum = colSums, ...)
 
-sf_sum_weighted(vals, cov_fracs, weights, .fun_sum = colSums, ...)
+sf_sum_weighted(vals, fraction, weights, .fun_sum = colSums, ...)
+}
+\arguments{
+\item{weights}{The default is grid area.}
 }
 \description{
 functions of zonal statistics
