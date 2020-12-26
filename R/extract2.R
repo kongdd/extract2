@@ -81,16 +81,18 @@ NULL
   nbands = length(names(r))
   .fun_sum = if (nbands > 1) colSums else sum
   n = length(geoms)
-  res = list()
-  for (i in 1:n) {
+  # res = list()
+  # for (i in 1:n) {
+  res = llply(1:n, function(i){
     ret <- geoms[[i]]
     vals <- raster::getValuesBlock(r,
       row = ret$row,
       col = ret$col,
       nrow = ret$nrow, ncol = ret$ncol
     ) #%>% as.matrix()
-    res[[i]] <- fun(vals, ret$fraction, weights = ret$area, .fun_sum = .fun_sum)
-  }
+    # # res[[i]] <-
+    fun(vals, ret$fraction, weights = ret$area, .fun_sum = .fun_sum)
+  }, .progress = "text")
   do.call(rbind, res) %>% as.data.frame()
 }
 
@@ -109,6 +111,26 @@ setMethod("extract2", signature(r = "list"), function(r, geoms, ...) {
   for(i in 1:length(r)) {
     runningId(i)
     res[[i]] <- extract2(r[[i]], geoms, ...)
+  }
+  setNames(res, names(r))
+})
+
+#' @export
+setMethod("extract2", signature(r = "character"), function(r, geoms, ...) {
+  if ("sf" %in% class(geoms)) {
+    # if geoms is sf
+    geoms <- sf::st_as_binary(sf::st_geometry(geoms), EWKB = TRUE)
+  }
+  if ("WKB" %in% class(geoms)) {
+    b <- raster(r[[1]]) %>% readAll()
+    geoms <- overlap(b, shp_wkb)
+  }
+
+  res = list()
+  for(i in 1:length(r)) {
+    runningId(i)
+    b <- brick(r[[i]]) %>% readAll()
+    res[[i]] <- extract2(b, geoms, ...)
   }
   setNames(res, names(r))
 })
